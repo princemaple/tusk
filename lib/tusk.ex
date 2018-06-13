@@ -18,7 +18,7 @@ defmodule Tusk do
   and the Tusk GenServer is supervised by the supervisor and monitored by the
   companion
   """
-  @spec start(Supervisor.supervisor(), task, [option])
+  @spec start(Supervisor.supervisor(), task, [option]) :: GenServer.on_start()
   def start(sup, task, options \\ []) do
     Tusk.DynamicSupervisor.start_child(sup, [task: task] ++ options)
   end
@@ -43,7 +43,7 @@ defmodule Tusk do
     end
   end
 
-  @spec start_link([option])
+  @spec start_link([option]) :: GenServer.on_start()
   def start_link(options) do
     GenServer.start_link(__MODULE__, options)
   end
