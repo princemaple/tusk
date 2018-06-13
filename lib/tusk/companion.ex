@@ -1,7 +1,16 @@
 defmodule Tusk.Companion do
   use GenServer, restart: :transient
 
-  defstruct [:task, :supervisor, :timeout, :on_success, :on_failure, :on_error, :reason]
+  defstruct [
+    task: nil,
+    supervisor: nil,
+    timeout: 5000,
+    timeout_ref: nil,
+    on_success: nil,
+    on_failure: nil,
+    on_error: nil,
+    reason: nil
+  ]
 
   require Logger
 
@@ -15,15 +24,22 @@ defmodule Tusk.Companion do
   end
 
   @impl GenServer
-  def handle_call(:task, {pid, _ref}, state) do
+  def handle_call(:task, {pid, _ref}, %{timeout: timeout} = state) do
     Process.monitor(pid)
-    {:reply, :ok, Map.put(state, :task, pid)}
+
+    case timeout do
+      value when value in [:infinity, nil] ->
+        {:reply, :ok, %{state | task: pid}}
+      timeout when is_integer(timeout) ->
+        ref = Process.send_after(self(), :timeout, timeout)
+        {:reply, :ok, %{state | task: pid, timeout_ref: ref}}
+    end
   end
 
   @impl GenServer
   def handle_call(:supervisor, {pid, _ref}, state) do
     Process.monitor(pid)
-    {:reply, :ok, Map.put(state, :supervisor, pid)}
+    {:reply, :ok, %{state | supervisor: pid}}
   end
 
   @impl GenServer
@@ -49,6 +65,7 @@ defmodule Tusk.Companion do
     Task.start(fn ->
       Tusk.execute(on_failure, reason)
     end)
+
     {:stop, :normal, :ok, state}
   end
 
@@ -60,6 +77,7 @@ defmodule Tusk.Companion do
     Task.start(fn ->
       Tusk.execute(on_failure, {:exceeding_retry_limit, reason})
     end)
+
     Logger.debug("Supervisor is down")
     {:stop, :normal, state}
   end
@@ -72,7 +90,23 @@ defmodule Tusk.Companion do
     Task.start(fn ->
       Tusk.execute(on_error, error)
     end)
+
     Logger.debug("Task process is down")
-    {:noreply, %{state | reason: error}}
+    {:noreply, cancel_timer(%{state | reason: error})}
+  end
+
+  @impl GenServer
+  def handle_info(:timeout, %{task: pid, on_error: on_error} = state) do
+    Process.exit(pid, :kill)
+    Task.start(fn ->
+      Tusk.execute(on_error, :timeout)
+    end)
+    {:noreply, %{state | timeout_ref: nil}}
+  end
+
+  defp cancel_timer(%{timeout_ref: nil} = state), do: state
+  defp cancel_timer(%{timeout_ref: ref} = state) do
+    Process.cancel_timer(ref)
+    state
   end
 end

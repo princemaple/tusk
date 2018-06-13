@@ -127,5 +127,22 @@ defmodule TuskTest do
         assert_receive %TuskTest.TestException{}
       end)
     end
+
+    test "timeout", %{sup: sup} do
+      this = self()
+      on_error = fn error -> send(this, error) end
+
+      capture_log(fn ->
+        {:ok, _} =
+          Tusk.start(
+            sup,
+            {ErrorTask, :test, [self()]},
+            on_error: on_error,
+            timeout: 10
+          )
+
+        assert_receive :timeout
+      end)
+    end
   end
 end
