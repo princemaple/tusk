@@ -3,10 +3,29 @@ defmodule Tusk do
 
   defstruct task: nil, companion: nil, no_retry_exceptions: []
 
+  @type task :: {module, atom, [any]} | fun
+  @type callback :: task
+  @type option ::
+          {:no_retry_exceptions, [module]}
+          | {:on_success, callback}
+          | {:on_failure, callback}
+          | {:on_error, callback}
+
+  @doc """
+  Starts a supervisor, a Tusk GenServer and a companion
+
+  The supervisor and the companion are supervised by the dynamic supervisor,
+  and the Tusk GenServer is supervised by the supervisor and monitored by the
+  companion
+  """
+  @spec start(Supervisor.supervisor(), task, [option])
   def start(sup, task, options \\ []) do
     Tusk.DynamicSupervisor.start_child(sup, [task: task] ++ options)
   end
 
+  @doc """
+  execute an mfa or a closure
+  """
   def execute(nil), do: nil
 
   def execute(task, result \\ nil)
@@ -24,6 +43,7 @@ defmodule Tusk do
     end
   end
 
+  @spec start_link([option])
   def start_link(options) do
     GenServer.start_link(__MODULE__, options)
   end
