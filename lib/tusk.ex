@@ -10,6 +10,7 @@ defmodule Tusk do
           | {:on_success, callback}
           | {:on_failure, callback}
           | {:on_error, callback}
+          | {:timeout, non_neg_integer | nil | :infinity}
 
   @doc """
   Starts a supervisor, a Tusk GenServer and a companion
