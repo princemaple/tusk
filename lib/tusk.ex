@@ -79,6 +79,11 @@ defmodule Tusk do
   end
 
   @impl GenServer
+  def terminate(:normal, _state) do
+    Logger.debug("Task finished")
+  end
+
+  @impl GenServer
   def terminate({:shutdown, {:no_retry_exception, error}}, %{companion: companion}) do
     GenServer.call(companion, {:error, {:no_retry_exception, error}})
     Logger.debug("exception but no retry")
