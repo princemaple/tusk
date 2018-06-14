@@ -11,7 +11,7 @@ The package can be installed by adding `tusk` to your list of dependencies in `m
 ```elixir
 def deps do
   [
-    {:tusk, "~> 0.1.0"}
+    {:tusk, "~> 0.1"}
   ]
 end
 ```
