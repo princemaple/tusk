@@ -11,6 +11,7 @@ defmodule Tusk do
           | {:on_failure, callback}
           | {:on_error, callback}
           | {:timeout, non_neg_integer | nil | :infinity}
+          | Supervisor.init_option()
 
   @doc """
   Starts a supervisor, a Tusk GenServer and a companion
